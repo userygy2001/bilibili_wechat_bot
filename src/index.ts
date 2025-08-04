@@ -2,6 +2,8 @@ import * as cron from 'node-cron';
 import { BilibiliService } from './services/bilibili';
 import { WeChatService } from './services/wechat';
 import { SubscriptionService } from './services/subscription';
+import { CommandService } from './services/command';
+import { CallbackServer } from './services/server';
 import { loadConfig, validateConfig } from './config';
 import { logger } from './utils/logger';
 import { mkdirSync, existsSync } from 'fs';
@@ -10,6 +12,8 @@ class BilibiliWeChatBot {
   private bilibiliService: BilibiliService;
   private wechatService: WeChatService;
   private subscriptionService: SubscriptionService;
+  private commandService: CommandService;
+  private callbackServer?: CallbackServer;
   private task?: cron.ScheduledTask;
 
   constructor() {
@@ -23,9 +27,23 @@ class BilibiliWeChatBot {
     this.bilibiliService = new BilibiliService();
     this.wechatService = new WeChatService(config.webhook.url);
     this.subscriptionService = new SubscriptionService(config.streamers);
+    this.commandService = new CommandService(this.subscriptionService, this.bilibiliService);
+    
+    // 设置命令服务到微信服务
+    this.wechatService.setCommandService(this.commandService);
+
+    // 如果启用了服务器，创建回调服务器
+    if (config.server?.enabled) {
+      const port = config.server.port || 3000;
+      this.callbackServer = new CallbackServer(port, this.wechatService);
+    }
 
     logger.info(`机器人启动成功，监控 ${config.streamers.length} 个主播`);
     logger.info(`检查间隔: ${config.checkInterval}`);
+    
+    if (config.server?.enabled) {
+      logger.info(`对话功能已启用，服务器端口: ${config.server.port || 3000}`);
+    }
 
     this.task = cron.schedule(config.checkInterval, () => {
       this.checkStreamers().catch(error => {
@@ -62,34 +80,44 @@ class BilibiliWeChatBot {
   public async start(): Promise<void> {
     logger.info('机器人已启动，开始监控...');
     
+    // 启动回调服务器
+    if (this.callbackServer) {
+      await this.callbackServer.start();
+    }
+    
     await this.checkStreamers();
   }
 
-  public stop(): void {
+  public async stop(): Promise<void> {
     if (this.task) {
       this.task.stop();
-      logger.info('机器人已停止');
     }
+    
+    if (this.callbackServer) {
+      await this.callbackServer.stop();
+    }
+    
+    logger.info('机器人已停止');
   }
 }
 
 const bot = new BilibiliWeChatBot();
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   logger.info('收到停止信号，正在关闭...');
-  bot.stop();
+  await bot.stop();
   process.exit(0);
 });
 
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   logger.info('收到终止信号，正在关闭...');
-  bot.stop();
+  await bot.stop();
   process.exit(0);
 });
 
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', async (error) => {
   logger.error('未捕获的异常:', error);
-  bot.stop();
+  await bot.stop();
   process.exit(1);
 });
 

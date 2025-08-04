@@ -20,5 +20,9 @@
     }
   ],
   "checkInterval": "*/2 * * * *",
-  "logLevel": "info"
+  "logLevel": "info",
+  "server": {
+    "enabled": true,
+    "port": 4000
+  }
 }

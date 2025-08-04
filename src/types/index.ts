@@ -39,6 +39,27 @@ export interface WeChatMessage {
   };
 }
 
+export interface WeChatCallbackMessage {
+  msgtype: string;
+  msgid: string;
+  from: {
+    userid: string;
+    name: string;
+  };
+  text?: {
+    content: string;
+  };
+  createtime: number;
+  roomid?: string;
+  agentid: number;
+}
+
+export interface CommandResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+}
+
 export interface Config {
   webhook: {
     url: string;
@@ -46,4 +67,8 @@ export interface Config {
   streamers: StreamerInfo[];
   checkInterval: string;
   logLevel: string;
+  server?: {
+    port: number;
+    enabled: boolean;
+  };
 }
