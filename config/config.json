@@ -1,0 +1,24 @@
+{
+  "webhook": {
+    "url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_WEBHOOK_KEY"
+  },
+  "streamers": [
+    {
+      "uid": 110631,
+      "name": "老番茄",
+      "roomId": 110
+    },
+    {
+      "uid": 7706705,
+      "name": "花少北",
+      "roomId": 7706705
+    },
+    {
+      "uid": 617285,
+      "name": "嗨氏",
+      "roomId": 617285
+    }
+  ],
+  "checkInterval": "*/2 * * * *",
+  "logLevel": "info"
+}
